@@ -1,0 +1,50 @@
+This contains the analysis scripts used to download, regrid and compress CMIP6 data
+
+---------------------------------------
+0. ESGF (earth system grid federation)
+
+First create an account and take notes about your OpenID, login and password. These three information must be kept in close. 
+Example: 
+Data search engine is at https://esgf-node.llnl.gov/search/cmip6/
+Login is required. Open ID is https://esgf-node.llnl.gov/esgf-idp/openid/yourusername
+The passwd is yourpassword
+
+1A. Use wget to download the data. 
+
+Generate the wget script off of the download site. 
+bash wget-XXXXX.sh -H https://esgf-node.llnl.gov/esgf-idp/openid/yourusername yourusername
+Then enter password at the prompt. 
+It will start downloading. However, when you are accessing a server through ssh, it stops when you close your laptop. 
+So, here is a solution for batch-mode download. 
+
+1B. Use wget in the batch mode on the pace cluster (recommended)
+
+Generate the wget script off of the download site. 
+Then copy the wget script to your scratch space. 
+$ scp wget-xxxxx.sh yourusername@login-d.pace.gatech.edu:~/scratch/downloads/.
+Then copy download.sh script to your scratch/download. 
+Modify it and execute it to download in the batch-mode. 
+All the scripts are located here. 
+
+--------------------------------------------------
+2. Regrid the model onto global 2x2 lon-lat grid. 
+
+Copy cmip6_remap3d.pbs script to your scratch/download. 
+Edit this file. 
+    set MYDIR. 
+    Adjust the number of CPUs if necessary. 
+    Adjust #PBS -M youremail@gatech.edu
+This allows you to execute the regridding in parallel mode
+To execute type: 
+$ msub cmip6_remap3d.pbs
+
+--------------------------------------------------
+3. Combine all fields into one file
+
+Edit and execute the one_file.py
+
+
+
+
+
+
