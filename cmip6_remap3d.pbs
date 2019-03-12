@@ -1,0 +1,80 @@
+#!/bin/bash
+#
+#PBS -N cmip6_remap3d
+#PBS -l nodes=1:ppn=64
+#PBS -l walltime=00:24:00:00
+#PBS -q atlas-6
+#PBS -m abe
+#PBS -M taka.ito@eas.gatech.edu
+
+module purge
+module load gcc python/2.7 hdf5/1.8.14 netcdf
+module load gnuparallel/20180822
+
+#MYDIR=/nv/hp5/takamitsu3/data2/CMIP6/o2t
+MYDIR=/nv/hp5/takamitsu3/scratch/cmip6-12-24
+procs=41
+TARGET_VAR=Omon
+
+export PATH="/nv/hp5/takamitsu3/data2/bin:$PATH"
+source `which env_parallel.bash`
+cd $MYDIR
+echo ------------------
+# clean up for safety
+rm *.nc_tmp.nc
+rm fn.txt
+rm fnall.txt
+rm jobs.txt
+
+#-------------------------------------
+# creating the list of input files
+ls *$TARGET_VAR*.nc > fnall.txt
+fn=$(ls *$TARGET_VAR*.nc)
+fn_array=( $(ls *$TARGET_VAR*.nc) )
+
+# counting the number of files
+N=$(wc -l fnall.txt | awk {'print $1'})
+echo there are $N input files. 
+if [ $N -gt $procs ]; then
+   echo "there is not enough assigned cpus, so breaking now..."
+   exit;
+fi
+
+# loop for each file
+for ((i=0; i<$N; i++ )); do
+   echo processing file: $i : ${fn_array[$i]}
+   echo ${fn_array[$i]} > fn.txt
+   python regrid.py > exec_$i.sh
+#   bash exec_$i.sh &
+   echo "cd $MYDIR\; bash $MYDIR/exec_$i.sh" >> jobs.txt
+done
+
+#JOBFILE should be set in the environment, as qsub -v JOBFILE=<filenmae>
+#or default file name jobs.txt will be used.
+JOBFILE=${JOBFILE:-jobs.txt}
+if [ ! -f $JOBFILE ]; then echo "File $JOBFILE does not exist. Exiting"; exit 0; fi
+JOBCOUNT=$(wc -l < $JOBFILE)
+if [ $procs -lt $JOBCOUNT ]
+then
+   echo "nodes*ppn must be equal or greater than the number of commands in "$JOBFILE; exit 0; 
+fi
+if [ ! -d $HOME/.parallel-$PBS_JOBID ]; then mkdir $HOME/.parallel-$PBS_JOBID; fi
+TEMP=$HOME/.parallel-$PBS_JOBID
+uniq $PBS_NODEFILE > $TEMP/uniqnode
+anchor=1
+
+# execute the command in jobs.txt
+for i in `cat $TEMP/uniqnode`
+do
+	numCores=`grep $i $PBS_NODEFILE|wc -l`
+        echo "sending " $numCores "jobs to host " $i 	
+        newAnchor=$(($numCores+$anchor))
+	echo "starting line "$anchor" ending line "$(($newAnchor-1)) 
+	sed -n -e ${anchor},${newAnchor}p $JOBFILE |env_parallel -S ${numCores}/${i} &  
+	anchor=$newAnchor
+done
+wait
+rm -rf ~/.parallel-$PBS_JOBID
+
+wait
+
