@@ -1,6 +1,11 @@
 This contains the analysis scripts used to download, regrid and compress CMIP6 data
 
 ---------------------------------------
+Can you use git on atlas-6 system?
+Check out this website: 
+https://pace.gatech.edu/how-use-github-passwordlessly-using-keys
+
+---------------------------------------
 0. ESGF (earth system grid federation)
 
 First create an account and take notes about your OpenID, login and password. These three information must be kept in close. 
